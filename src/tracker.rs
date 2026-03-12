@@ -41,9 +41,15 @@ impl WhiteoutTracker {
 
     /// Returns true if `path` from `current_layer` should be suppressed.
     pub fn is_suppressed(&self, path: &Path, current_layer: usize) -> bool {
-        let components = normal_components(path);
         let mut node = &self.root;
-        for (i, comp) in components.iter().enumerate() {
+        let mut iter = path.components().filter_map(|c| match c {
+            Component::Normal(s) => Some(s),
+            _ => None,
+        }).peekable();
+
+        while let Some(comp) = iter.next() {
+            // Check ancestor: if this node (before descending) has a
+            // whiteout, all descendants from older layers are suppressed.
             if let Some(state) = &node.state {
                 match state {
                     WhiteoutState::Opaque { layer_index }
@@ -52,12 +58,13 @@ impl WhiteoutTracker {
                     }
                 }
             }
-            match node.children.get(comp.as_str()) {
+            let comp_str = comp.to_string_lossy();
+            match node.children.get(comp_str.as_ref()) {
                 Some(child) => node = child,
                 None => return false,
             }
-            // At terminal component: check Simple or Opaque.
-            if i == components.len() - 1 {
+            // At terminal component: check the leaf node.
+            if iter.peek().is_none() {
                 if let Some(state) = &node.state {
                     match state {
                         WhiteoutState::Simple { layer_index }

@@ -152,7 +152,7 @@ impl CanonicalTarHeader {
             let field = &mut raw[0..100];
             field.fill(0);
             let bytes = link_path_str.as_bytes();
-            let len = bytes.len().min(99);
+            let len = bytes.len().min(100);
             field[..len].copy_from_slice(&bytes[..len]);
         }
 
